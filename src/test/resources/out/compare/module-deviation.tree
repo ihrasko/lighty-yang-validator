@@ -11,15 +11,15 @@ module: model
      +--rw device
         +--rw enumType?       enumeration
         +--rw model?       uint8
-augment /data-container/list-data:
+augment /mo:data-container/mo:list-data:
   +--rw month?       string
   +--rw sub-device* [type]
      +--rw type?       string
      +--rw year?       uint8
      +--rw state?       string
-augment /data-container:
+augment /mo:data-container:
   +--rw device
      +--rw enumType?       enumeration
-augment /data-container/device:
+augment /mo:data-container/mo:device:
   +--rw model?       string
   +--rw manufacturer?       string
