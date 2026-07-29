@@ -61,8 +61,8 @@ public class IntegrationTest implements Cleanable {
     public void notFoundImportFormatParseAllTest() throws IOException {
         final String lyvOutput = ItUtils.startLyvParseAllWithFileOutput("integration/yang", "tree");
 
-        assertTrue(lyvOutput.contains("Failed to parse YANG from source SourceSpecificContext"));
-        assertTrue(lyvOutput.contains("Imported module [ietf-yang-types] was not found"));
+        assertTrue(lyvOutput.contains("Failed to assemble Effective Model Context"));
+        assertTrue(lyvOutput.contains("Imported module ietf-yang-types was not found"));
     }
 
     @Test
@@ -91,8 +91,8 @@ public class IntegrationTest implements Cleanable {
     public void notFoundImportTreeFormatTest() throws IOException {
         final String lyvOutput = ItUtils.startLyvWithFileOutput(
                 "integration/yang/ietf-interfaces-modified@2018-02-20.yang", "tree");
-        assertTrue(lyvOutput.contains("Failed to parse YANG from source SourceSpecificContext"));
-        assertTrue(lyvOutput.contains("Imported module [ietf-yang-types] was not found"));
+        assertTrue(lyvOutput.contains("Failed to assemble Effective Model Context"));
+        assertTrue(lyvOutput.contains("Imported module ietf-yang-types was not found"));
     }
 
     @Test
@@ -108,8 +108,8 @@ public class IntegrationTest implements Cleanable {
     public void notFoundImportDependFormatTest() throws IOException {
         final String lyvOutput = ItUtils.startLyvWithFileOutput(
                 "integration/yang/ietf-interfaces-modified@2018-02-20.yang", "depend");
-        assertTrue(lyvOutput.contains("Failed to parse YANG from source SourceSpecificContext"));
-        assertTrue(lyvOutput.contains("Imported module [ietf-yang-types] was not found"));
+        assertTrue(lyvOutput.contains("Failed to assemble Effective Model Context"));
+        assertTrue(lyvOutput.contains("Imported module ietf-yang-types was not found"));
     }
 
     @Test
@@ -123,8 +123,8 @@ public class IntegrationTest implements Cleanable {
     public void notFoundImportJsonTreeFormatTest() throws IOException {
         final String lyvOutput = ItUtils.startLyvWithFileOutput(
                 "integration/yang/ietf-interfaces-modified@2018-02-20.yang", "json-tree");
-        assertTrue(lyvOutput.contains("Failed to parse YANG from source SourceSpecificContext"));
-        assertTrue(lyvOutput.contains("Imported module [ietf-yang-types] was not found"));
+        assertTrue(lyvOutput.contains("Failed to assemble Effective Model Context"));
+        assertTrue(lyvOutput.contains("Imported module ietf-yang-types was not found"));
     }
 
     @Test
@@ -138,8 +138,8 @@ public class IntegrationTest implements Cleanable {
     public void notFoundImportJstreeFormatTest() throws IOException {
         final String lyvOutput = ItUtils.startLyvWithFileOutput(
                 "integration/yang/ietf-interfaces-modified@2018-02-20.yang", "jstree");
-        assertTrue(lyvOutput.contains("Failed to parse YANG from source SourceSpecificContext"));
-        assertTrue(lyvOutput.contains("Imported module [ietf-yang-types] was not found"));
+        assertTrue(lyvOutput.contains("Failed to assemble Effective Model Context"));
+        assertTrue(lyvOutput.contains("Imported module ietf-yang-types was not found"));
     }
 
     @Test
@@ -156,7 +156,7 @@ public class IntegrationTest implements Cleanable {
     public void notFoundImportYangFormatTest() throws IOException {
         final String lyvOutput = ItUtils.startLyvWithFileOutput("integration/xml", "integration/yang",
                 "integration/yang/ietf-interfaces-modified@2018-02-20.yang", "yang");
-        assertTrue(lyvOutput.contains("Failed to parse YANG from source SourceSpecificContext"));
-        assertTrue(lyvOutput.contains("Imported module [ietf-yang-types] was not found"));
+        assertTrue(lyvOutput.contains("Failed to assemble Effective Model Context"));
+        assertTrue(lyvOutput.contains("Imported module ietf-yang-types was not found"));
     }
 }
