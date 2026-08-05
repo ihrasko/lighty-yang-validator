@@ -406,10 +406,12 @@ public class CheckUpdateFrom {
     }
 
     private Integer extractMinElements(final ElementCountMatcher matcher) {
-        if (matcher instanceof ElementCountMatcher.AtLeast) {
-            return ((ElementCountMatcher.AtLeast) matcher).lowerInt();
-        } else if (matcher instanceof ElementCountMatcher.InRange) {
-            return ((ElementCountMatcher.InRange) matcher).atLeast().lowerInt();
+        // AtLeast.lowerInt() is documented as "the next lower-than-this bound", i.e. min-elements - 1
+        // (min-elements == 0 <=> lowerInt() == -1), so the actual min-elements value is lowerInt() + 1.
+        if (matcher instanceof ElementCountMatcher.AtLeast atLeast) {
+            return atLeast.lowerInt() + 1;
+        } else if (matcher instanceof ElementCountMatcher.InRange inRange) {
+            return inRange.atLeast().lowerInt() + 1;
         }
         return null;
     }
