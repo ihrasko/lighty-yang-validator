@@ -105,6 +105,8 @@ public class CheckUpdateFrom {
 
     private final SchemaInferenceStack oldSchemaIS;
     private final SchemaInferenceStack newSchemaIS;
+    private final EffectiveModelContext oldContext;
+    private final EffectiveModelContext newContext;
     private final Module oldModule;
     private final Module newModule;
     private final boolean is7950;
@@ -116,6 +118,8 @@ public class CheckUpdateFrom {
         final String oldModuleName = extractModuleName(oldModule);
         oldSchemaIS = SchemaInferenceStack.of(oldContext);
         newSchemaIS = SchemaInferenceStack.of(newContext);
+        this.oldContext = oldContext;
+        this.newContext = newContext;
         this.newModule = newModule;
         this.oldModule = oldContext.findModules(oldModuleName).iterator().next();
         is7950 = rfcVersion == 7950;
@@ -441,8 +445,21 @@ public class CheckUpdateFrom {
     }
 
     private void checkState(final DataSchemaNode oldNode, final DataSchemaNode newNode) {
-        final boolean oldIsConfig = oldNode.isConfiguration();
-        final boolean newIsConfig = newNode.isConfiguration();
+        // Nodes reached through an augmentation's own child tree do not have their own effectiveConfig()
+        // applicable (same as inside a grouping), so oldNode/newNode's own effectiveConfig() cannot be trusted
+        // directly here; resolve config through the real, correctly-positioned schema-tree node instead. Using the
+        // full schema tree (rather than findDataTreeChild) means choice/case segments in the path do not need any
+        // special handling.
+        final boolean oldIsConfig = oldContext.findSchemaTreeNode(oldSchemaIS.toSchemaNodeIdentifier())
+                .filter(DataSchemaNode.class::isInstance)
+                .map(DataSchemaNode.class::cast)
+                .flatMap(DataSchemaNode::effectiveConfig)
+                .orElse(Boolean.TRUE);
+        final boolean newIsConfig = newContext.findSchemaTreeNode(newSchemaIS.toSchemaNodeIdentifier())
+                .filter(DataSchemaNode.class::isInstance)
+                .map(DataSchemaNode.class::cast)
+                .flatMap(DataSchemaNode::effectiveConfig)
+                .orElse(Boolean.TRUE);
         if (!oldIsConfig && newIsConfig
                 && newNode instanceof MandatoryAware && ((MandatoryAware) newNode).isMandatory()) {
             errors.add(illegalConfigStateError().updateInformation(newSchemaIS.toSchemaNodeIdentifier()

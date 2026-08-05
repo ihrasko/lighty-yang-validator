@@ -135,7 +135,8 @@ public class Tree extends FormatPlugin {
         int augmentationNodes = st.getValue().size();
         for (final SchemaTree value : st.getValue()) {
             final DataSchemaNode node = value.getSchemaNode();
-            final LyvNodeData lyvNodeData = new LyvNodeData(modelContext, node, value.getAbsolutePath());
+            final LyvNodeData lyvNodeData = new LyvNodeData(modelContext, node, value.getAbsolutePath(), null,
+                    value.isConfig());
             final ConsoleLine consoleLine = new ConsoleLine(Collections.emptyList(), lyvNodeData, RpcInputOutput.OTHER,
                 NAMESPACE_PREFIX);
             lines.add(consoleLine);
@@ -151,7 +152,8 @@ public class Tree extends FormatPlugin {
         for (final SchemaTree st : schemaTree.getChildren()) {
             if (st.getQname().getModule().equals(module.getQNameModule()) && !st.isAugmenting()) {
                 final DataSchemaNode node = st.getSchemaNode();
-                final LyvNodeData lyvNodeData = new LyvNodeData(modelContext, node, st.getAbsolutePath());
+                final LyvNodeData lyvNodeData = new LyvNodeData(modelContext, node, st.getAbsolutePath(), null,
+                        st.isConfig());
                 final ConsoleLine consoleLine = new ConsoleLine(Collections.emptyList(), lyvNodeData,
                         RpcInputOutput.OTHER, NAMESPACE_PREFIX);
                 lines.add(consoleLine);
@@ -413,7 +415,8 @@ public class Tree extends FormatPlugin {
             final SchemaTree nextST = caseNodes.next();
             if (nextST.getQname().getModule().equals(module.getQNameModule())) {
                 final DataSchemaNode child = nextST.getSchemaNode();
-                final LyvNodeData lyvNodeData = new LyvNodeData(modelContext, child, nextST.getAbsolutePath());
+                final LyvNodeData lyvNodeData = new LyvNodeData(modelContext, child, nextST.getAbsolutePath(), null,
+                        nextST.isConfig());
                 final ConsoleLine consoleLine = new ConsoleLine(new ArrayList<>(isConnected), lyvNodeData, inputOutput,
                     NAMESPACE_PREFIX);
                 lines.add(consoleLine);
@@ -450,7 +453,8 @@ public class Tree extends FormatPlugin {
             final SchemaTree nextST = childNodes.next();
             if (nextST.getQname().getModule().equals(module.getQNameModule())) {
                 final DataSchemaNode child = nextST.getSchemaNode();
-                final LyvNodeData lyvNodeData = new LyvNodeData(modelContext, child, nextST.getAbsolutePath(), keys);
+                final LyvNodeData lyvNodeData = new LyvNodeData(modelContext, child, nextST.getAbsolutePath(), keys,
+                        nextST.isConfig());
                 final ConsoleLine consoleLine = new ConsoleLine(new ArrayList<>(isConnected), lyvNodeData, inputOutput,
                     NAMESPACE_PREFIX);
                 lines.add(consoleLine);

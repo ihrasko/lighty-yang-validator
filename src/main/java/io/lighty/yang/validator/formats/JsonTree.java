@@ -123,11 +123,17 @@ public class JsonTree extends FormatPlugin {
                 final String path = resolvePath(augmentation.getTargetPath());
                 augmentationJson.put(PATH, path);
                 augmentationJson.put(NAME, path);
+                // The nodes returned by augmentation.getChildNodes() are not grafted onto the augment's target,
+                // so their own effectiveConfig() is not applicable (same as inside a grouping): use them for
+                // structure/type/name/description (deviation-oblivious, as intended), but resolve config through
+                // the real, correctly-positioned counterpart in the effective model context (resolveChildMetadata
+                // looks each node's own position up via modelContext.findSchemaTreeNode()).
                 for (final DataSchemaNode child : augmentation.getChildNodes()) {
                     if (isConfig) {
-                        augmentationJson.append(CHILDREN, resolveChildMetadata(child, stack));
+                        augmentationJson.append(CHILDREN, resolveChildMetadata(child, stack, null, Boolean.TRUE));
                     } else {
-                        augmentationJson.append(CHILDREN, resolveChildMetadata(child, stack, Boolean.FALSE));
+                        augmentationJson.append(CHILDREN,
+                                resolveChildMetadata(child, stack, Boolean.FALSE, Boolean.FALSE));
                     }
                 }
 
@@ -288,7 +294,23 @@ public class JsonTree extends FormatPlugin {
 
     private JSONObject resolveChildMetadata(final DataSchemaNode node, final LyvStack stack,
             final @Nullable Boolean isConfig) {
-        final Boolean config = isConfig != null ? isConfig : node.isConfiguration();
+        return resolveChildMetadata(node, stack, isConfig, Boolean.TRUE);
+    }
+
+    /**
+     * Resolves a single node's JSON metadata. {@code node} is used for structure/type/name/description (the
+     * declared view, deviation-oblivious by design). {@code config} is either {@code isConfig} when forced, or
+     * else looked up fresh through the effective model context via the node's own schema-tree position (which
+     * includes {@code node} itself, since {@code stack.enter(node)} happens first) — a node reached only through
+     * an augmentation's own child tree does not have its own effectiveConfig() applicable (same as inside a
+     * grouping), so looking it up this way instead of calling {@code node.effectiveConfig()} directly is what
+     * makes an explicit {@code config false;} on an augmented descendant visible. {@code ambientConfig} is the
+     * fallback used when that lookup is absent (e.g. deviated away) or does not resolve a config value of its own.
+     */
+    private JSONObject resolveChildMetadata(final DataSchemaNode node, final LyvStack stack,
+            final @Nullable Boolean isConfig, final boolean ambientConfig) {
+        stack.enter(node);
+        final boolean config = isConfig != null ? isConfig : resolveEffectiveConfig(stack).orElse(ambientConfig);
         final JSONObject jsonModuleChild = new JSONObject();
         jsonModuleChild.put(NAME, node.getQName().getLocalName());
         jsonModuleChild.put(CONFIG, config);
@@ -296,7 +318,6 @@ public class JsonTree extends FormatPlugin {
         jsonModuleChild.put(STATUS, node.getStatus().name());
         jsonModuleChild.put(TYPE_INFO, new JSONObject());
         jsonModuleChild.put(CLASS, resolveNodeClass(node));
-        stack.enter(node);
         jsonModuleChild.put(PATH, resolvePath(stack));
         if (node instanceof ActionNodeContainer) {
             for (final ActionDefinition child : ((ActionNodeContainer) node).getActions()) {
@@ -316,11 +337,11 @@ public class JsonTree extends FormatPlugin {
         }
         if (node instanceof DataNodeContainer) {
             for (final DataSchemaNode child : ((DataNodeContainer) node).getChildNodes()) {
-                jsonModuleChild.append(CHILDREN, resolveChildMetadata(child, stack, isConfig));
+                jsonModuleChild.append(CHILDREN, resolveChildMetadata(child, stack, isConfig, config));
             }
         } else if (node instanceof ChoiceSchemaNode) {
             for (final CaseSchemaNode caseNode : ((ChoiceSchemaNode) node).getCases()) {
-                jsonModuleChild.append(CHILDREN, resolveChildMetadata(caseNode, stack, isConfig));
+                jsonModuleChild.append(CHILDREN, resolveChildMetadata(caseNode, stack, isConfig, config));
             }
         } else if (node instanceof TypedDataSchemaNode) {
             jsonModuleChild.put(TYPE_INFO, resolveType(((TypedDataSchemaNode) node).typeDefinition()));
@@ -386,6 +407,18 @@ public class JsonTree extends FormatPlugin {
         jsonModuleMetadata.put(CONTACT, module.getContact().orElse(EMPTY));
         jsonModuleMetadata.put(DESCRIPTION, module.getDescription().orElse(EMPTY));
         return jsonModuleMetadata;
+    }
+
+    /**
+     * Looks up {@code stack}'s current position through the effective model context's schema tree (which,
+     * unlike {@link EffectiveModelContext#findDataTreeChild}, addresses choice/case directly instead of skipping
+     * over them), returning its effectiveConfig() if resolved to a real, correctly-positioned DataSchemaNode.
+     */
+    private Optional<Boolean> resolveEffectiveConfig(final LyvStack stack) {
+        return modelContext.findSchemaTreeNode(stack.toSchemaNodeIdentifier())
+                .filter(DataSchemaNode.class::isInstance)
+                .map(DataSchemaNode.class::cast)
+                .flatMap(DataSchemaNode::effectiveConfig);
     }
 
     private String resolvePath(final LyvStack stack) {

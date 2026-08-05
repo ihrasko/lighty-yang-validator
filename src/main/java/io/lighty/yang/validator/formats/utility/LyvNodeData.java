@@ -8,6 +8,7 @@
 package io.lighty.yang.validator.formats.utility;
 
 import java.util.List;
+import java.util.Optional;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 import org.opendaylight.yangtools.yang.common.QName;
@@ -27,6 +28,7 @@ public class LyvNodeData {
     private final EffectiveModelContext context;
     private final SchemaNode node;
     private final Absolute absolutePath;
+    private final Boolean resolvedConfig;
 
     public LyvNodeData(final @NonNull EffectiveModelContext context, final @NonNull SchemaNode node,
             final @NonNull LyvStack stack) {
@@ -38,6 +40,15 @@ public class LyvNodeData {
         this(context, node, stack.toSchemaNodeIdentifier(), keys);
     }
 
+    /**
+     * Same as {@link #LyvNodeData(EffectiveModelContext, SchemaNode, LyvStack, List)}, but with an explicitly
+     * resolved config value - see {@link #LyvNodeData(EffectiveModelContext, SchemaNode, Absolute, List, Boolean)}.
+     */
+    public LyvNodeData(final @NonNull EffectiveModelContext context, final @NonNull SchemaNode node,
+            final @NonNull LyvStack stack, final @Nullable List<QName> keys, final @Nullable Boolean resolvedConfig) {
+        this(context, node, stack.toSchemaNodeIdentifier(), keys, resolvedConfig);
+    }
+
     public LyvNodeData(final @NonNull EffectiveModelContext context, final @NonNull SchemaNode node,
             final @NonNull Absolute absolutePath) {
         this(context, node, absolutePath, null);
@@ -45,9 +56,22 @@ public class LyvNodeData {
 
     public LyvNodeData(final @NonNull EffectiveModelContext context, final @NonNull SchemaNode node,
             final @NonNull Absolute absolutePath, final @Nullable List<QName> keys) {
+        this(context, node, absolutePath, keys, null);
+    }
+
+    /**
+     * Same as {@link #LyvNodeData(EffectiveModelContext, SchemaNode, Absolute, List)}, but with an explicitly
+     * resolved config value instead of leaving it to be derived from {@code node} itself - needed when
+     * {@code node} was reached through an augmentation's own child tree, whose own effectiveConfig() is not
+     * applicable (same as inside a grouping); see {@link io.lighty.yang.validator.simplify.SchemaTree#isConfig()}.
+     */
+    public LyvNodeData(final @NonNull EffectiveModelContext context, final @NonNull SchemaNode node,
+            final @NonNull Absolute absolutePath, final @Nullable List<QName> keys,
+            final @Nullable Boolean resolvedConfig) {
         this.context = context;
         this.absolutePath = absolutePath;
         this.node = node;
+        this.resolvedConfig = resolvedConfig;
         isKey = keys != null && keys.contains(node.getQName());
     }
 
@@ -61,6 +85,15 @@ public class LyvNodeData {
 
     public Absolute getAbsolutePath() {
         return absolutePath;
+    }
+
+    /**
+     * The resolved config value, if explicitly provided at construction time; otherwise empty, meaning callers
+     * should derive it from {@link #getNode()} themselves (safe as long as the node is already at its real,
+     * correctly-positioned location).
+     */
+    public Optional<Boolean> getResolvedConfig() {
+        return Optional.ofNullable(resolvedConfig);
     }
 
     public boolean isNodeMandatory() {

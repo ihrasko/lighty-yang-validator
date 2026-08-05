@@ -298,7 +298,7 @@ public class ModulePrinter {
         if (isPrintingAllowed) {
             if (schemaNode instanceof ContainerLike) {
                 printer.openStatement(Statement.CONTAINER, schemaNode.getQName().getLocalName());
-                printer.printConfig(schemaNode.isConfiguration());
+                printer.printConfig(schemaNode.effectiveConfig().orElse(Boolean.TRUE));
             } else if (schemaNode instanceof ListSchemaNode listSchemaNode) {
                 printer.openStatement(Statement.LIST, schemaNode.getQName().getLocalName());
                 final StringJoiner keyJoiner = new StringJoiner(" ", "key \"", "\"");
