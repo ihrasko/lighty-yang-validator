@@ -11,6 +11,7 @@ import io.lighty.yang.validator.formats.utility.LyvNodeData;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.common.XMLNamespace;
 import org.opendaylight.yangtools.yang.model.api.CaseSchemaNode;
@@ -26,7 +27,6 @@ import org.opendaylight.yangtools.yang.model.api.TypedDataSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.meta.DeclaredStatement;
 import org.opendaylight.yangtools.yang.model.api.stmt.AnydataEffectiveStatement;
 import org.opendaylight.yangtools.yang.model.api.stmt.AnyxmlEffectiveStatement;
-import org.opendaylight.yangtools.yang.model.api.stmt.IfFeatureAwareDeclaredStatement;
 import org.opendaylight.yangtools.yang.model.api.stmt.IfFeatureStatement;
 import org.opendaylight.yangtools.yang.model.api.stmt.SchemaNodeIdentifier.Absolute;
 import org.opendaylight.yangtools.yang.model.api.type.BooleanTypeDefinition;
@@ -49,6 +49,7 @@ abstract class Line {
     final boolean isChoice;
     final boolean isCase;
     private final Map<XMLNamespace, String> namespacePrefix;
+    private final Optional<Boolean> resolvedConfig;
     Status status;
     String nodeName;
     String flag;
@@ -66,6 +67,7 @@ abstract class Line {
         nodeName = node.getQName().getLocalName();
         this.inputOutput = inputOutput;
         this.namespacePrefix = namespacePrefix;
+        this.resolvedConfig = lyvNodeData.getResolvedConfig();
         resolveFlag(node, lyvNodeData.getAbsolutePath(), lyvNodeData.getContext());
         resolvePathAndType(node);
         resolveKeys(node);
@@ -74,9 +76,15 @@ abstract class Line {
 
     protected abstract void resolveFlag(SchemaNode node, Absolute absolutePath, EffectiveModelContext context);
 
+    /**
+     * Resolves the rw/ro-style flag from config. Prefers the resolved config passed in via {@code LyvNodeData}
+     * (needed when {@code dataSchemaNode} was reached through an augmentation's own child tree, whose own
+     * effectiveConfig() is not applicable - same as inside a grouping), falling back to the node's own
+     * effectiveConfig() otherwise.
+     */
     protected void resolveFlagForDataSchemaNode(final DataSchemaNode dataSchemaNode, final String config,
             final String noConfig) {
-        if (dataSchemaNode.isConfiguration()) {
+        if (resolvedConfig.orElseGet(() -> dataSchemaNode.effectiveConfig().orElse(Boolean.TRUE))) {
             flag = config;
         } else {
             flag = noConfig;
@@ -85,8 +93,8 @@ abstract class Line {
 
     private void resolveIfFeatures(final SchemaNode node) {
         final DeclaredStatement<?> declared = getDeclared(node);
-        if (declared instanceof IfFeatureAwareDeclaredStatement) {
-            final var ifFeature = ((IfFeatureAwareDeclaredStatement<?>) declared).getIfFeatures();
+        if (declared instanceof IfFeatureStatement.MultipleIn) {
+            final var ifFeature = ((IfFeatureStatement.MultipleIn<?>) declared).ifFeatureStatements();
             ifFeatures.addAll(ifFeature);
         }
     }
@@ -108,7 +116,7 @@ abstract class Line {
 
     private void resolvePathAndType(final SchemaNode node) {
         if (node instanceof TypedDataSchemaNode) {
-            final TypeDefinition<? extends TypeDefinition<?>> type = ((TypedDataSchemaNode) node).getType();
+            final TypeDefinition<? extends TypeDefinition<?>> type = ((TypedDataSchemaNode) node).typeDefinition();
             resolvePathAndTypeForDataSchemaNode(type);
         } else if (node instanceof AnydataEffectiveStatement) {
             typeName = ANYDATA;

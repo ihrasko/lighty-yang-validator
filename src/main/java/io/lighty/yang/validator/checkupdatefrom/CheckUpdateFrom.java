@@ -60,7 +60,6 @@ import org.opendaylight.yangtools.yang.model.api.AugmentationSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.DataNodeContainer;
 import org.opendaylight.yangtools.yang.model.api.DataSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
-import org.opendaylight.yangtools.yang.model.api.ElementCountConstraint;
 import org.opendaylight.yangtools.yang.model.api.ElementCountConstraintAware;
 import org.opendaylight.yangtools.yang.model.api.IdentitySchemaNode;
 import org.opendaylight.yangtools.yang.model.api.MandatoryAware;
@@ -70,8 +69,9 @@ import org.opendaylight.yangtools.yang.model.api.MustDefinition;
 import org.opendaylight.yangtools.yang.model.api.NotificationDefinition;
 import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
 import org.opendaylight.yangtools.yang.model.api.Status;
-import org.opendaylight.yangtools.yang.model.api.TypeAware;
 import org.opendaylight.yangtools.yang.model.api.TypeDefinition;
+import org.opendaylight.yangtools.yang.model.api.TypeDefinitionAware;
+import org.opendaylight.yangtools.yang.model.api.meta.ElementCountMatcher;
 import org.opendaylight.yangtools.yang.model.api.stmt.ModuleEffectiveStatement;
 import org.opendaylight.yangtools.yang.model.api.stmt.RevisionStatement;
 import org.opendaylight.yangtools.yang.model.api.stmt.SchemaNodeIdentifier;
@@ -105,6 +105,8 @@ public class CheckUpdateFrom {
 
     private final SchemaInferenceStack oldSchemaIS;
     private final SchemaInferenceStack newSchemaIS;
+    private final EffectiveModelContext oldContext;
+    private final EffectiveModelContext newContext;
     private final Module oldModule;
     private final Module newModule;
     private final boolean is7950;
@@ -116,6 +118,8 @@ public class CheckUpdateFrom {
         final String oldModuleName = extractModuleName(oldModule);
         oldSchemaIS = SchemaInferenceStack.of(oldContext);
         newSchemaIS = SchemaInferenceStack.of(newContext);
+        this.oldContext = oldContext;
+        this.newContext = newContext;
         this.newModule = newModule;
         this.oldModule = oldContext.findModules(oldModuleName).iterator().next();
         is7950 = rfcVersion == 7950;
@@ -313,8 +317,9 @@ public class CheckUpdateFrom {
                 }
                 //     oldNode.getMi
 
-                if (oldNode instanceof TypeAware) {
-                    checkTypeAware(((TypeAware) oldNode).getType(), ((TypeAware) newNode).getType());
+                if (oldNode instanceof TypeDefinitionAware tda) {
+                    checkTypeAware((tda).typeDefinition(),
+                        ((TypeDefinitionAware) newNode).typeDefinition());
                 }
 
                 if (oldNode instanceof DataNodeContainer) {
@@ -364,47 +369,55 @@ public class CheckUpdateFrom {
     }
 
     private void checkMaxElements(final DataSchemaNode oldNode, final DataSchemaNode newNode) {
-        final Optional<ElementCountConstraint> oldElementCountConstraint =
-                ((ElementCountConstraintAware) oldNode).getElementCountConstraint();
-        final Optional<ElementCountConstraint> newElementCountConstraint =
-                ((ElementCountConstraintAware) newNode).getElementCountConstraint();
-        if (newElementCountConstraint.isPresent() && oldElementCountConstraint.isPresent()) {
-            final Integer newMaxElements = newElementCountConstraint.get().getMaxElements();
-            final Integer oldMaxElements = oldElementCountConstraint.get().getMaxElements();
-            if (newMaxElements != null && oldMaxElements != null && newMaxElements < oldMaxElements) {
-                errors.add(maxElementsError().updateInformation(newSchemaIS.toSchemaNodeIdentifier()
-                                + MAX_ELEMENTS + newMaxElements,
-                        oldSchemaIS.toSchemaNodeIdentifier() + MAX_ELEMENTS + oldMaxElements));
-            }
+        final ElementCountMatcher oldMatcher = ((ElementCountConstraintAware) oldNode).elementCountMatcher();
+        final ElementCountMatcher newMatcher = ((ElementCountConstraintAware) newNode).elementCountMatcher();
+
+        final Integer oldMaxElements = extractMaxElements(oldMatcher);
+        final Integer newMaxElements = extractMaxElements(newMatcher);
+
+        if (newMaxElements != null && oldMaxElements != null && newMaxElements < oldMaxElements) {
+            errors.add(maxElementsError().updateInformation(newSchemaIS.toSchemaNodeIdentifier()
+                    + MAX_ELEMENTS + newMaxElements,
+                oldSchemaIS.toSchemaNodeIdentifier() + MAX_ELEMENTS + oldMaxElements));
         }
     }
 
     private void checkMinElements(final DataSchemaNode oldNode, final DataSchemaNode newNode) {
-        final Optional<ElementCountConstraint> oldElementCountConstraint =
-                ((ElementCountConstraintAware) oldNode).getElementCountConstraint();
-        final Optional<ElementCountConstraint> newElementCountConstraint =
-                ((ElementCountConstraintAware) newNode).getElementCountConstraint();
-        if (newElementCountConstraint.isPresent() && oldElementCountConstraint.isEmpty()) {
-            if (newElementCountConstraint.get().getMinElements() != null) {
-                errors.add(minElementsError().updateInformation(newSchemaIS.toSchemaNodeIdentifier()
-                                + MIN_ELEMENTS + newElementCountConstraint.get().getMinElements(),
-                        oldSchemaIS.toSchemaNodeIdentifier() + MIN_ELEMENTS + DONT_EXISTS));
-            }
-        } else if (newElementCountConstraint.isPresent()) {
-            final Integer newMinElements = newElementCountConstraint.get().getMinElements();
-            final Integer oldMinElements = oldElementCountConstraint.get().getMinElements();
-            if (newMinElements != null && oldMinElements == null) {
-                errors.add(minElementsError().updateInformation(newSchemaIS.toSchemaNodeIdentifier()
-                                + MIN_ELEMENTS + newElementCountConstraint.get().getMinElements(),
-                        oldSchemaIS.toSchemaNodeIdentifier() + MIN_ELEMENTS + DONT_EXISTS));
-            } else if (newMinElements != null && oldMinElements < newMinElements) {
-                errors.add(minElementsError().updateInformation(newSchemaIS.toSchemaNodeIdentifier()
-                                + MIN_ELEMENTS + newElementCountConstraint.get().getMinElements(),
-                        oldSchemaIS.toSchemaNodeIdentifier() + MIN_ELEMENTS
-                                + oldElementCountConstraint.get().getMinElements()));
-            }
+        final ElementCountMatcher oldMatcher = ((ElementCountConstraintAware) oldNode).elementCountMatcher();
+        final ElementCountMatcher newMatcher = ((ElementCountConstraintAware) newNode).elementCountMatcher();
 
+        final Integer oldMinElements = extractMinElements(oldMatcher);
+        final Integer newMinElements = extractMinElements(newMatcher);
+
+        if (newMinElements != null && oldMinElements == null) {
+            errors.add(minElementsError().updateInformation(newSchemaIS.toSchemaNodeIdentifier()
+                    + MIN_ELEMENTS + newMinElements,
+                oldSchemaIS.toSchemaNodeIdentifier() + MIN_ELEMENTS + DONT_EXISTS));
+        } else if (newMinElements != null && oldMinElements != null && oldMinElements < newMinElements) {
+            errors.add(minElementsError().updateInformation(newSchemaIS.toSchemaNodeIdentifier()
+                    + MIN_ELEMENTS + newMinElements,
+                oldSchemaIS.toSchemaNodeIdentifier() + MIN_ELEMENTS + oldMinElements));
         }
+    }
+
+    private Integer extractMaxElements(final ElementCountMatcher matcher) {
+        if (matcher instanceof ElementCountMatcher.AtMost) {
+            return ((ElementCountMatcher.AtMost) matcher).asSaturatedInt();
+        } else if (matcher instanceof ElementCountMatcher.InRange) {
+            return ((ElementCountMatcher.InRange) matcher).atMost().asSaturatedInt();
+        }
+        return null;
+    }
+
+    private Integer extractMinElements(final ElementCountMatcher matcher) {
+        // AtLeast.lowerInt() is documented as "the next lower-than-this bound", i.e. min-elements - 1
+        // (min-elements == 0 <=> lowerInt() == -1), so the actual min-elements value is lowerInt() + 1.
+        if (matcher instanceof ElementCountMatcher.AtLeast atLeast) {
+            return atLeast.lowerInt() + 1;
+        } else if (matcher instanceof ElementCountMatcher.InRange inRange) {
+            return inRange.atLeast().lowerInt() + 1;
+        }
+        return null;
     }
 
     private boolean checkType(final TypeDefinition<?> oldNode, final TypeDefinition<?> newNode) {
@@ -432,8 +445,21 @@ public class CheckUpdateFrom {
     }
 
     private void checkState(final DataSchemaNode oldNode, final DataSchemaNode newNode) {
-        final boolean oldIsConfig = oldNode.isConfiguration();
-        final boolean newIsConfig = newNode.isConfiguration();
+        // Nodes reached through an augmentation's own child tree do not have their own effectiveConfig()
+        // applicable (same as inside a grouping), so oldNode/newNode's own effectiveConfig() cannot be trusted
+        // directly here; resolve config through the real, correctly-positioned schema-tree node instead. Using the
+        // full schema tree (rather than findDataTreeChild) means choice/case segments in the path do not need any
+        // special handling.
+        final boolean oldIsConfig = oldContext.findSchemaTreeNode(oldSchemaIS.toSchemaNodeIdentifier())
+                .filter(DataSchemaNode.class::isInstance)
+                .map(DataSchemaNode.class::cast)
+                .flatMap(DataSchemaNode::effectiveConfig)
+                .orElse(Boolean.TRUE);
+        final boolean newIsConfig = newContext.findSchemaTreeNode(newSchemaIS.toSchemaNodeIdentifier())
+                .filter(DataSchemaNode.class::isInstance)
+                .map(DataSchemaNode.class::cast)
+                .flatMap(DataSchemaNode::effectiveConfig)
+                .orElse(Boolean.TRUE);
         if (!oldIsConfig && newIsConfig
                 && newNode instanceof MandatoryAware && ((MandatoryAware) newNode).isMandatory()) {
             errors.add(illegalConfigStateError().updateInformation(newSchemaIS.toSchemaNodeIdentifier()
@@ -703,9 +729,9 @@ public class CheckUpdateFrom {
             }
 
             final Collection<? extends RevisionStatement> revisionsNew =
-                    Objects.requireNonNull(((ModuleEffectiveStatement) newModule).getDeclared()).getRevisions();
+                    Objects.requireNonNull(((ModuleEffectiveStatement) newModule).getDeclared()).revisionStatements();
             final Collection<? extends RevisionStatement> revisionsOld =
-                    Objects.requireNonNull(((ModuleEffectiveStatement) oldModule).getDeclared()).getRevisions();
+                    Objects.requireNonNull(((ModuleEffectiveStatement) oldModule).getDeclared()).revisionStatements();
 
             final List<Revision> newDates = revisionsNew
                     .stream()

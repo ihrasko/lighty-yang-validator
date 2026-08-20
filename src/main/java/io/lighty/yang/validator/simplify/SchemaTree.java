@@ -25,16 +25,36 @@ public class SchemaTree implements Comparable<SchemaTree> {
     private final boolean isRootNode;
     private final boolean isAugmenting;
     private final ActionDefinition actionNode;
+    private final boolean isConfig;
     private final Set<SchemaTree> children = new LinkedHashSet<>();
 
     SchemaTree(final Absolute absolutePath, final DataSchemaNode schemaNode,
             final boolean isRootNode, final boolean isAugmenting,
             final ActionDefinition actionNode) {
+        this(absolutePath, schemaNode, isRootNode, isAugmenting, actionNode, defaultConfig(schemaNode));
+    }
+
+    SchemaTree(final Absolute absolutePath, final DataSchemaNode schemaNode,
+            final boolean isRootNode, final boolean isAugmenting,
+            final ActionDefinition actionNode, final boolean isConfig) {
         this.absolutePath = absolutePath;
         this.schemaNode = schemaNode;
         this.isRootNode = isRootNode;
         this.isAugmenting = isAugmenting;
         this.actionNode = actionNode;
+        this.isConfig = isConfig;
+    }
+
+    /**
+     * The default config resolution: the schema node's own effectiveConfig(), defaulting to {@code true} when
+     * absent (no explicit/inherited value, or not applicable, e.g. no node at all). Correct as long as
+     * {@code schemaNode} is already the real, correctly-positioned node - which does not hold for nodes reached
+     * only through an augmentation's own child tree (same as inside a grouping); those must have their isConfig
+     * resolved through the real, grafted position and passed in explicitly instead - see
+     * {@link SchemaSelector#noXml()}.
+     */
+    private static boolean defaultConfig(final DataSchemaNode schemaNode) {
+        return schemaNode == null || schemaNode.effectiveConfig().orElse(Boolean.TRUE);
     }
 
     public QName getQname() {
@@ -55,6 +75,10 @@ public class SchemaTree implements Comparable<SchemaTree> {
 
     public DataSchemaNode getSchemaNode() {
         return schemaNode;
+    }
+
+    public boolean isConfig() {
+        return isConfig;
     }
 
     public ActionDefinition getActionNode() {
@@ -83,6 +107,18 @@ public class SchemaTree implements Comparable<SchemaTree> {
             final boolean isAugmentingInput, final LyvStack stack) {
         final SchemaTree tree = new SchemaTree(stack.toSchemaNodeIdentifier(), schemaNodeInput, isRootNodeInput,
             isAugmentingInput, null);
+        return addChild(tree);
+    }
+
+    /**
+     * Same as {@link #addChild(DataSchemaNode, boolean, boolean, LyvStack)}, but with an explicitly resolved
+     * {@code isConfig} instead of deriving it from {@code schemaNodeInput} itself - see
+     * {@link SchemaSelector#noXml()} for why that matters for augmentation content.
+     */
+    public SchemaTree addChild(final DataSchemaNode schemaNodeInput, final boolean isRootNodeInput,
+            final boolean isAugmentingInput, final LyvStack stack, final boolean isConfig) {
+        final SchemaTree tree = new SchemaTree(stack.toSchemaNodeIdentifier(), schemaNodeInput, isRootNodeInput,
+            isAugmentingInput, null, isConfig);
         return addChild(tree);
     }
 
