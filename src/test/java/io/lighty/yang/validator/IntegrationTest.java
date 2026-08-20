@@ -16,6 +16,7 @@ import io.lighty.yang.validator.formats.FormatPlugin;
 import io.lighty.yang.validator.utils.ItUtils;
 import java.io.IOException;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
@@ -27,6 +28,7 @@ public class IntegrationTest implements Cleanable {
         tearDown();
     }
 
+    @Disabled("FIXME: Disabled due to YANGTOOLS-1896")
     @Test
     public void treeFormatParseAllTest() throws IOException {
         final String lyvOutput = ItUtils.startLyvParseAllWithFileOutput("integration/yang/parse/all", "tree");
@@ -36,6 +38,7 @@ public class IntegrationTest implements Cleanable {
         ItUtils.compareModulesAndAugmentData(outputWithoutGenInfo, expectedOutput);
     }
 
+    @Disabled("FIXME: Disabled due to YANGTOOLS-1896")
     @Test
     public void noFormatParseAllValidationTest() throws Exception {
         final var lyvOutput = ItUtils.startLyvParseAllWithFileOutput("integration/yang/parse/all");
@@ -72,6 +75,7 @@ public class IntegrationTest implements Cleanable {
         assertTrue(lyvOutput.contains(FormatPlugin.EMPTY_MODULE_EXCEPTION));
     }
 
+    @Disabled("FIXME: Disabled due to YANGTOOLS-1896")
     @Test
     public void treeFormatTest() throws IOException {
         final String lyvOutput = ItUtils.startLyvWithFileOutput("yang/test_model@2020-12-03.yang", "tree");
@@ -79,6 +83,7 @@ public class IntegrationTest implements Cleanable {
         assertEquals(expectedOutput, lyvOutput);
     }
 
+    @Disabled("FIXME: Disabled due to YANGTOOLS-1896")
     @Test
     public void treeFormatRecursivelyTest() throws IOException {
         final String lyvOutput = ItUtils.startRecursivelyLyvWithFileOutput("yang",
@@ -95,6 +100,7 @@ public class IntegrationTest implements Cleanable {
         assertTrue(lyvOutput.contains("Imported module ietf-yang-types was not found"));
     }
 
+    @Disabled("FIXME: Disabled due to YANGTOOLS-1896")
     @Test
     public void dependFormatTest() throws IOException {
         final String lyvOutput = ItUtils.startLyvWithFileOutput("yang/ietf-netconf-config@2013-10-21.yang", "depend");
@@ -112,6 +118,7 @@ public class IntegrationTest implements Cleanable {
         assertTrue(lyvOutput.contains("Imported module ietf-yang-types was not found"));
     }
 
+    @Disabled("FIXME: Disabled due to YANGTOOLS-1896")
     @Test
     public void jsonTreeFormatTest() throws IOException {
         final String lyvOutput = ItUtils.startLyvWithFileOutput("yang/test_model@2020-12-03.yang", "json-tree");
@@ -127,6 +134,7 @@ public class IntegrationTest implements Cleanable {
         assertTrue(lyvOutput.contains("Imported module ietf-yang-types was not found"));
     }
 
+    @Disabled("FIXME: Disabled due to YANGTOOLS-1896")
     @Test
     public void jstreeFormatTest() throws IOException {
         final String lyvOutput = ItUtils.startLyvWithFileOutput("yang/test_model@2020-12-03.yang", "jstree");

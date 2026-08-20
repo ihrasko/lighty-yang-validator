@@ -16,6 +16,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class TreeTest extends FormatTest {
@@ -29,6 +30,7 @@ public class TreeTest extends FormatTest {
         builder.setTreeConfiguration(0, 0, false, false, false);
     }
 
+    @Disabled("FIXME: Disabled due to YANGTOOLS-1896")
     @Test
     public void treePrefixMainModuleTest() throws Exception {
         setFormat();
@@ -40,6 +42,7 @@ public class TreeTest extends FormatTest {
         runTreeTest("ip-prefix-main-module.tree");
     }
 
+    @Disabled("FIXME: Disabled due to YANGTOOLS-1896")
     @Test
     public void treePrefixModuleTest() throws Exception {
         setFormat();
@@ -51,6 +54,7 @@ public class TreeTest extends FormatTest {
         runTreeTest("interfaces-prefix-module.tree");
     }
 
+    @Disabled("FIXME: Disabled due to YANGTOOLS-1896")
     @Test
     public void treeLineLengthTest() throws Exception {
         setFormat();
@@ -71,6 +75,7 @@ public class TreeTest extends FormatTest {
         runTreeTest("tree-help");
     }
 
+    @Disabled("FIXME: Disabled due to YANGTOOLS-1896")
     @Test
     public void treeDepthTest() throws Exception {
         setFormat();
